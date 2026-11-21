@@ -35,6 +35,7 @@ class CurvePoint(BaseModel):
     power: float
     low: float
     high: float
+    novel: bool = False  # такого сочетания погоды в обучающих данных не было
 
 
 class Forecast(BaseModel):

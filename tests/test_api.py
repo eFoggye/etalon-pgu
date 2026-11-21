@@ -199,3 +199,18 @@ def test_explain_can_be_switched_off(client):
     body = predict(client, explain=False)
 
     assert body["plan"]["contributions"] == []
+
+
+def test_curve_marks_points_outside_training_data(client):
+    curve = predict(client)["curve"]  # типичный час: края по температуре вне данных
+
+    assert any(point["novel"] for point in curve)
+    assert not all(point["novel"] for point in curve)
+
+
+def test_batch_accepts_humidity_sensor_overshoot(client, small_bundle):
+    frame = small_bundle.example_batch.assign(RH=100.16)
+
+    response = client.post("/api/batch", files=csv_upload(frame))
+
+    assert response.status_code == 200, response.text

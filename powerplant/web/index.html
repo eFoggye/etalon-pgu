@@ -11,7 +11,8 @@
     --ink: #1d2731;
     --muted: #5e6a75;
     --rule: #c5cbd1;
-    --process: #1f5f8b;
+    --process: #1d6fb8;
+    --ref: #b5651d;
     --band: #bccfdd;
     --zone: #9fb4c6;
     --warn: #8a5a00;
@@ -189,7 +190,7 @@
       <div class="split">
         <div class="panel chart">
           <h2>Мощность от температуры</h2>
-          <p class="sub">По модели плана при остальной погоде как сейчас. Полоса — 9 случаев из 10.</p>
+          <p class="sub">По модели плана при остальной погоде как сейчас. Полоса — 9 случаев из 10, серый пунктир — таких часов в данных не было.</p>
           <div id="curve"></div>
         </div>
         <div class="panel">
@@ -473,6 +474,18 @@ function renderWarnings(list) {
   $("warnings").replaceChildren(...list.map((text) => el("p", {}, text)));
 }
 
+function curveRuns(points) {
+  // Делит кривую на участки «есть в данных» / «нет в данных»; граничная точка входит в оба.
+  const runs = [];
+  let current = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    current.push(points[i]);
+    if (points[i].novel !== points[i - 1].novel) { runs.push(current); current = [points[i]]; }
+  }
+  if (current.length > 1) runs.push(current);
+  return runs;
+}
+
 function renderCurve(points, current) {
   if (!points.length) return;
   const w = 520, h = 260, pad = { l: 44, r: 12, t: 12, b: 34 };
@@ -491,9 +504,15 @@ function renderCurve(points, current) {
     root.append(svg("line", { x1: pad.l, x2: w - pad.r, y1: Y(v), y2: Y(v), stroke: "#d6dde3" }));
     root.append(svgText({ x: pad.l - 6, y: Y(v) + 4, "text-anchor": "end", "font-size": 12, fill: "var(--muted)" }, String(v)));
   }
-  const band = points.map((p) => `${X(p.AT)},${Y(p.high)}`).concat([...points].reverse().map((p) => `${X(p.AT)},${Y(p.low)}`));
-  root.append(svg("polygon", { points: band.join(" "), fill: "var(--band)", opacity: 0.8 }));
-  root.append(svg("polyline", { points: points.map((p) => `${X(p.AT)},${Y(p.power)}`).join(" "), fill: "none", stroke: "var(--process)", "stroke-width": 2.5 }));
+  for (const run of curveRuns(points)) {
+    const novel = run[0].novel;
+    const band = run.map((p) => `${X(p.AT)},${Y(p.high)}`).concat([...run].reverse().map((p) => `${X(p.AT)},${Y(p.low)}`));
+    root.append(svg("polygon", { points: band.join(" "), fill: novel ? "#dde2e6" : "var(--band)", opacity: 0.85 }));
+    root.append(svg("polyline", {
+      points: run.map((p) => `${X(p.AT)},${Y(p.power)}`).join(" "), fill: "none",
+      stroke: novel ? "var(--muted)" : "var(--process)", "stroke-width": novel ? 1.8 : 2.5, "stroke-dasharray": novel ? "5 4" : "none",
+    }));
+  }
   if (current >= x0 && current <= x1) {
     const nearest = points.reduce((best, p) => (Math.abs(p.AT - current) < Math.abs(best.AT - current) ? p : best), points[0]);
     root.append(svg("line", { x1: X(current), x2: X(current), y1: pad.t, y2: h - pad.b, stroke: "var(--ink)", "stroke-dasharray": "3 3" }));
@@ -605,7 +624,7 @@ function batchChart(rows) {
   root.append(svg("polygon", { points: band.join(" "), fill: "var(--band)", opacity: 0.7 }));
   const line = (key, attrs) => root.append(svg("polyline", { points: rows.map((r, i) => `${X(i)},${Y(r[key])}`).join(" "), fill: "none", ...attrs }));
   line("plan", { stroke: "var(--process)", "stroke-width": 2 });
-  if (rows[0].reference !== null) line("reference", { stroke: "var(--process)", "stroke-width": 1.5, "stroke-dasharray": "5 4" });
+  if (rows[0].reference !== null) line("reference", { stroke: "var(--ref)", "stroke-width": 2, "stroke-dasharray": "6 4" });
   if (rows[0].actual !== null) line("actual", { stroke: "var(--ink)", "stroke-width": 1.8 });
   const wrap = el("div", { class: "chart" });
   wrap.append(root);
@@ -621,7 +640,7 @@ function batchLegend(s) {
     return span;
   };
   legend.append(item("background: var(--band)", "план по погоде, 9 из 10"));
-  if (s.has_vacuum) legend.append(item("border-top: 2px dashed var(--process); height: 0", "эталон с учётом вакуума"));
+  if (s.has_vacuum) legend.append(item("border-top: 2px dashed var(--ref); height: 0", "эталон с учётом вакуума"));
   if (s.has_actual) legend.append(item("background: var(--ink); height: 2px", "факт"));
   if (s.has_actual) legend.append(item("background: var(--alarm-bg)", "тревога: среднее за сутки ниже нормы"));
   return legend;

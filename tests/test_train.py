@@ -26,7 +26,8 @@ def data():
 def _summary(features: tuple[str, ...]) -> dict:
     return {
         "features": list(features),
-        "chosen": "Линейная",
+        "chosen": "Линейная + физика",  # имя варианта с физикой отсутствует в таблице CV
+        "chosen_cv": {"RMSE": 4.4, "MAE": 3.5, "R2": 0.93},
         "cv": [{"name": "Линейная", "RMSE": 4.5}],
         "interval": {"coverage_test": 0.9, "test_metrics": {"RMSE": 4.5, "MAE": 3.6, "R2": 0.93}},
         "importance": {"permutation": [{"group": "AT", "rmse_increase": 10.0}]},

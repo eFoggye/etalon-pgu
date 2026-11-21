@@ -8,6 +8,8 @@ requires-python = ">=3.11"
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
+# Устаревание внутри самой библиотеки тестового клиента, на наш код не влияет.
+filterwarnings = ["ignore:Using .httpx. with .starlette.testclient. is deprecated"]
 
 [tool.ruff]
 line-length = 100

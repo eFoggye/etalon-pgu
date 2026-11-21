@@ -51,6 +51,7 @@ from powerplant.models import (  # noqa: E402
     build_ladder,
     build_stacking,
     evaluate_oof,
+    physically_plausible,
     regression_metrics,
     select_model,
     tune,
@@ -106,7 +107,7 @@ def tuned_ladder(
 ) -> dict[str, tuple[BaseEstimator, dict, int]]:
     """Подбирает (или берёт из кеша) гиперпараметры каждой ступени лестницы."""
     ladder = {}
-    for candidate in build_ladder(config.SEED):
+    for candidate in build_ladder(config.SEED, features=list(x.columns)):
         if candidate.name in cached and not retune:
             params = cached[candidate.name]
             estimator = clone(candidate.estimator).set_params(**params)
@@ -131,24 +132,24 @@ def ladder_results(
     return results
 
 
-def cv_rows(results: list[CvResult]) -> list[dict[str, object]]:
+def cv_rows(results: list[CvResult], plausible: dict[str, bool]) -> list[dict[str, object]]:
     return [
         {"name": r.name, "complexity": r.complexity, "MAE": r.mae, "RMSE": r.rmse,
-         "RMSE_std": r.rmse_std, "R2": r.r2, "MAPE": r.mape, "params": dict(r.params)}
+         "RMSE_std": r.rmse_std, "R2": r.r2, "MAPE": r.mape, "params": dict(r.params),
+         "physics_ok": plausible[r.name]}
         for r in results
     ]
 
 
 def test_rows(
-    ladder: dict[str, tuple[BaseEstimator, dict, int]], split: Split, features: list[str]
+    fitted: dict[str, BaseEstimator], split: Split, features: list[str]
 ) -> list[dict[str, float]]:
     """Единственный прогон на отложенном тесте — для итоговой таблицы, без выбора по нему."""
-    x_train, y_train = split.train[features], split.train[config.TARGET]
-    rows = []
-    for name, (estimator, _, _) in ladder.items():
-        prediction = clone(estimator).fit(x_train, y_train).predict(split.test[features])
-        rows.append({"name": name, **regression_metrics(split.test[config.TARGET], prediction)})
-    return rows
+    return [
+        {"name": name, **regression_metrics(split.test[config.TARGET],
+                                            model.predict(split.test[features]))}
+        for name, model in fitted.items()
+    ]
 
 
 def slice_edges(values: pd.Series) -> list[float]:
@@ -213,13 +214,14 @@ def choose(
     """Выбор по G2 и опыт с физическими признаками для выбранной модели."""
     chosen = select_model(results)
     base = ladder[chosen.name][0]
-    physics = evaluate_oof(chosen.name + " + физика", with_physics(base), x, y,
-                           complexity=chosen.complexity)
-    kept = physics.rmse < chosen.rmse * (1 - PHYSICS_MIN_GAIN)
+    variant = with_physics(base)
+    physics = evaluate_oof(chosen.name + " + физика", variant, x, y, complexity=chosen.complexity)
+    plausible = physically_plausible(clone(variant).fit(x, y), x)
+    kept = plausible and physics.rmse < chosen.rmse * (1 - PHYSICS_MIN_GAIN)
     LOG.info("  выбрана %s; физика: RMSE %.3f → %.3f, оставляем: %s", chosen.name, chosen.rmse,
              physics.rmse, kept)
     report = {"rmse_base": chosen.rmse, "rmse_physics": physics.rmse, "kept": kept,
-              "min_gain": PHYSICS_MIN_GAIN}
+              "min_gain": PHYSICS_MIN_GAIN, "physics_ok": plausible}
     if kept:
         return physics, with_physics(base), True, report
     return chosen, base, False, report
@@ -230,17 +232,22 @@ def run_set(set_name: str, split: Split, cached: dict, retune: bool) -> SetOutco
     LOG.info("Набор «%s»: признаки %s", set_name, features)
     x, y = split.train[features], split.train[config.TARGET]
     ladder = tuned_ladder(x, y, cached.get(set_name, {}), retune)
+    fitted = {name: clone(est).fit(x, y) for name, (est, _, _) in ladder.items()}
+    plausible = {name: physically_plausible(model, x) for name, model in fitted.items()}
+    LOG.info("  физическая проверка (мощность не растёт с жарой): %s", plausible)
     results = ladder_results(ladder, x, y)
-    chosen, estimator, physics, physics_report = choose(results, ladder, x, y)
-    fitted = clone(estimator).fit(x, y)
+    eligible = [result for result in results if plausible[result.name]]
+    chosen, estimator, physics, physics_report = choose(eligible, ladder, x, y)
+    final = clone(estimator).fit(x, y)
     summary = {
         "features": features,
-        "cv": cv_rows(results),
+        "cv": cv_rows(results, plausible),
         "chosen": chosen.name,
+        "chosen_cv": {"RMSE": chosen.rmse, "MAE": chosen.mae, "R2": chosen.r2},
         "physics": physics_report,
-        "test": test_rows(ladder, split, features),
-        "interval": interval_report(fitted, chosen.oof, split, features),
-        "importance": explain_report(set_name, estimator, fitted, split, features),
+        "test": test_rows(fitted, split, features),
+        "interval": interval_report(final, chosen.oof, split, features),
+        "importance": explain_report(set_name, estimator, final, split, features),
     }
     params = {name: p for name, (_, p, _) in ladder.items() if name != STACKING_NAME}
     return SetOutcome(summary, params, chosen.name, estimator, physics)
@@ -317,9 +324,9 @@ def page_importance(summary: dict) -> list[dict[str, object]]:
 
 
 def page_metrics(summary: dict, service: dict) -> dict[str, object]:
-    chosen = next(row for row in summary["cv"] if row["name"] == summary["chosen"])
     test = summary["interval"]["test_metrics"]
-    return {"name": summary["chosen"], "cv_rmse": chosen["RMSE"], "test_rmse": test["RMSE"],
+    return {"name": summary["chosen"], "cv_rmse": summary["chosen_cv"]["RMSE"],
+            "test_rmse": test["RMSE"],
             "test_mae": test["MAE"], "test_r2": test["R2"],
             "coverage_test": summary["interval"]["coverage_test"], "q_mw": service["q_mw_all"]}
 
@@ -356,7 +363,8 @@ def build_bundle(outcomes: dict[str, SetOutcome], df: pd.DataFrame, report: dict
 def cache_meta(report: dict) -> dict[str, object]:
     """С чем подбирались параметры: при другом наборе данных или разбиении кеш не годится."""
     return {"dataset_sha256": report["data"]["dataset_sha256"], "seed": config.SEED,
-            "test_size": config.TEST_SIZE, "stratify_bins": STRATIFY_BINS}
+            "test_size": config.TEST_SIZE, "stratify_bins": STRATIFY_BINS,
+            "monotonic": dict(config.MONOTONIC)}
 
 
 def read_cache(meta: dict[str, object]) -> dict:

@@ -68,8 +68,14 @@ def regression_metrics(y_true, y_pred) -> dict[str, float]:
     }
 
 
-def build_ladder(seed: int = config.SEED) -> list[Candidate]:
-    """Модели от простой к сложной. Масштабирование только там, где оно нужно (линейные)."""
+def build_ladder(
+    seed: int = config.SEED, features: Sequence[str] = config.FEATURES_ALL
+) -> list[Candidate]:
+    """Модели от простой к сложной. Масштабирование только там, где оно нужно (линейные).
+
+    Бустинг получает ограничения монотонности по физике для тех признаков, что есть в наборе.
+    """
+    monotonic = {name: config.MONOTONIC.get(name, 0) for name in features}
     polynomial = Pipeline(
         [
             ("poly", PolynomialFeatures(include_bias=False)),
@@ -99,7 +105,7 @@ def build_ladder(seed: int = config.SEED) -> list[Candidate]:
         Candidate(
             "Градиентный бустинг",
             4,
-            HistGradientBoostingRegressor(random_state=seed),
+            HistGradientBoostingRegressor(random_state=seed, monotonic_cst=monotonic),
             {
                 "learning_rate": loguniform(0.02, 0.2),
                 "max_iter": [300, 500, 800],
@@ -121,8 +127,16 @@ def build_stacking(forest: BaseEstimator, boosting: BaseEstimator, seed: int) ->
 
 
 def with_physics(estimator: BaseEstimator) -> Pipeline:
-    """Та же модель, но с добавленными плотностью воздуха и точкой росы."""
-    return Pipeline([("physics", PhysicsFeatures()), ("model", clone(estimator))])
+    """Та же модель, но с добавленными плотностью воздуха и точкой росы.
+
+    Если у модели есть ограничения монотонности, к ним добавляется физика плотности,
+    иначе через неограниченную плотность модель могла бы снова начать расти с жарой.
+    """
+    model = clone(estimator)
+    constraints = getattr(model, "monotonic_cst", None)
+    if isinstance(constraints, dict):
+        model = model.set_params(monotonic_cst={**constraints, **config.PHYSICS_FEATURE_MONOTONIC})
+    return Pipeline([("physics", PhysicsFeatures()), ("model", model)])
 
 
 def tune(
@@ -176,6 +190,23 @@ def evaluate_oof(
         oof=oof,
         params=MappingProxyType(dict(params or {})),
     )
+
+
+def physically_plausible(
+    fitted: BaseEstimator,
+    x: pd.DataFrame,
+    tolerance: float = config.PHYSICS_TOLERANCE_MW,
+    points: int = 40,
+) -> bool:
+    """Физическая проверка: при росте температуры по всему диапазону данных мощность не растёт.
+
+    Остальные признаки — на медианах. Подъём больше `tolerance` МВт — модель отбраковывается.
+    """
+    grid = np.linspace(x["AT"].min(), x["AT"].max(), points)
+    frame = pd.DataFrame({col: np.full(points, x[col].median()) for col in x.columns})
+    frame = frame.assign(AT=grid)
+    prediction = np.asarray(fitted.predict(frame), dtype=float)
+    return bool(np.max(np.diff(prediction), initial=0.0) <= tolerance)
 
 
 def select_model(

@@ -123,7 +123,8 @@ def validate_batch(frame: pd.DataFrame) -> pd.DataFrame:
     numeric = frame[known].apply(pd.to_numeric, errors="coerce")
     problems = []
     for col in known:
-        bounds = ACTUAL_RANGE if col == config.TARGET else config.INPUT_RANGES[col]
+        # Файлы станции проверяем по контракту данных: там допускается огрех датчика RH до 100.5%.
+        bounds = ACTUAL_RANGE if col == config.TARGET else config.CONTRACT_RANGES[col]
         values = numeric[col]
         bad = int((values.isna() | ~values.between(bounds.low, bounds.high)).sum())
         if bad:
@@ -167,9 +168,11 @@ class ForecastService:
         frame = pd.DataFrame({"AT": grid, "AP": request.AP, "RH": request.RH})
         powers = self.bundle.plan.predict(frame)
         lows, highs = interval(powers, self.bundle.plan.q)
+        novel = novelty_distance(novelty, frame) > novelty.threshold
         return [
-            CurvePoint(AT=_round(at, 1), power=_round(p), low=_round(lo), high=_round(hi))
-            for at, p, lo, hi in zip(grid, powers, lows, highs, strict=True)
+            CurvePoint(AT=_round(at, 1), power=_round(p), low=_round(lo), high=_round(hi),
+                       novel=bool(flag))
+            for at, p, lo, hi, flag in zip(grid, powers, lows, highs, novel, strict=True)
         ]
 
     def _warnings(self, request: PredictRequest) -> list[str]:
