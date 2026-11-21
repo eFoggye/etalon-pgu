@@ -462,7 +462,7 @@ function renderLedger(result, actual) {
     verdict = el("div", { class: "verdict alarm" },
       `Ниже нормы для этого вакуума на ${fmt.format(-d.other_mw)} МВт — стоит проверить оборудование. Потери ≈ ${fmt0.format(d.rub_per_hour)} ₽ в час`);
   } else if (d.total_mw < 0) {
-    verdict = el("div", { class: "verdict ok" }, `Недобор ${fmt.format(-d.total_mw)} МВт объясняется условиями, ≈ ${fmt0.format(d.rub_per_hour)} ₽ в час`);
+    verdict = el("div", { class: "verdict ok" }, `Недобор ${fmt.format(-d.total_mw)} МВт объясняется погодой и вакуумом, станция в пределах нормы`);
   } else {
     verdict = el("div", { class: "verdict ok" }, "Факт в пределах нормы");
   }

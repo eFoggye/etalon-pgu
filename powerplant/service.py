@@ -197,7 +197,8 @@ class ForecastService:
             vacuum_mw=_round(parts.vacuum),
             other_mw=_round(parts.other),
             below_reference_interval=actual < reference.low,
-            rub_per_hour=_round(max(0.0, -parts.total) * price, 0),
+            # Потери в контроле — от того, что станция должна давать при этом вакууме.
+            rub_per_hour=_round(max(0.0, -parts.other) * price, 0),
         )
 
     def _plan_risk(self, plan: Forecast, required: float | None) -> PlanRisk | None:

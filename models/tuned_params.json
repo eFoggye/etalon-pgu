@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "dataset_sha256": "3c1fc11025f8424f8d95802d8b7086dffd3f73a552c6dcab3d973620986194b2",
+    "seed": 42,
+    "test_size": 0.2,
+    "stratify_bins": 10,
+    "monotonic": {
+      "AT": -1
+    }
+  },
+  "params": {
+    "plan": {
+      "Константа": {},
+      "Линейная": {},
+      "Полином + Ridge": {
+        "poly__degree": 4,
+        "ridge__alpha": 0.00013289448722869195
+      },
+      "Случайный лес": {
+        "n_estimators": 300,
+        "min_samples_leaf": 5,
+        "max_features": 0.75
+      },
+      "Градиентный бустинг": {
+        "l2_regularization": 0.31592553907017473,
+        "learning_rate": 0.029812242770646535,
+        "max_iter": 300,
+        "max_leaf_nodes": 31,
+        "min_samples_leaf": 20
+      }
+    },
+    "ref": {
+      "Константа": {},
+      "Линейная": {},
+      "Полином + Ridge": {
+        "poly__degree": 4,
+        "ridge__alpha": 0.00013289448722869195
+      },
+      "Случайный лес": {
+        "n_estimators": 200,
+        "min_samples_leaf": 1,
+        "max_features": 0.5
+      },
+      "Градиентный бустинг": {
+        "l2_regularization": 0.0029380279387035343,
+        "learning_rate": 0.02864339657822303,
+        "max_iter": 800,
+        "max_leaf_nodes": 63,
+        "min_samples_leaf": 10
+      }
+    }
+  }
+}

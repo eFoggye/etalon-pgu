@@ -214,3 +214,11 @@ def test_batch_accepts_humidity_sensor_overshoot(client, small_bundle):
     response = client.post("/api/batch", files=csv_upload(frame))
 
     assert response.status_code == 200, response.text
+
+
+def test_hourly_loss_is_counted_from_reference_not_from_plan(client):
+    body = predict(client, V=52.0, actual_mw=440.0, price_rub_per_mwh=1000)
+
+    deviation = body["deviation"]
+    expected = max(0.0, -deviation["other_mw"]) * 1000
+    assert deviation["rub_per_hour"] == pytest.approx(expected, abs=1)
