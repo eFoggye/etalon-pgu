@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Эталон мощности ПГУ</title>
+<style>
+  :root {
+    --bg: #e4e7ea;
+    --panel: #f3f4f5;
+    --ink: #1d2731;
+    --muted: #5e6a75;
+    --rule: #c5cbd1;
+    --process: #1f5f8b;
+    --band: #bccfdd;
+    --zone: #9fb4c6;
+    --warn: #8a5a00;
+    --warn-bg: #fbf0d6;
+    --warn-rule: #e2b85a;
+    --alarm: #a8261d;
+    --alarm-bg: #f6dfdc;
+    --num: "DIN Alternate", "Bahnschrift", "DIN Condensed", "Arial Narrow", sans-serif;
+    --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.45 var(--ui);
+    font-variant-numeric: tabular-nums;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 18px 24px 40px; }
+
+  header.bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 32px; }
+  h1 { font: 700 26px/1.1 var(--num); letter-spacing: 0.01em; margin: 0; }
+  h1 small { display: block; font: 400 14px/1.4 var(--ui); color: var(--muted); margin-top: 4px; }
+  nav.tabs { display: flex; gap: 2px; margin-left: auto; background: var(--rule); padding: 2px; border-radius: 6px; }
+  nav.tabs button {
+    font: 600 15px var(--ui); color: var(--muted); background: transparent; border: 0;
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+  }
+  nav.tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); }
+
+  .scenarios { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 18px 0 16px; }
+  .scenarios span { color: var(--muted); margin-right: 4px; }
+  .scenarios button {
+    font: 500 14px var(--ui); color: var(--ink); background: var(--panel);
+    border: 1px solid var(--rule); border-radius: 4px; padding: 6px 12px; cursor: pointer;
+  }
+  .scenarios button:hover { border-color: var(--muted); }
+
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--process); outline-offset: 2px; }
+
+  .grid { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 16px; align-items: start; }
+  .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 18px 20px; }
+
+  .control { margin-bottom: 18px; }
+  .control label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .control .name { font-weight: 600; }
+  .control input[type="number"] {
+    width: 92px; font: 600 17px var(--num); text-align: right; color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 4px; padding: 3px 6px; background: #fff;
+  }
+  .control .hint { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  input[type="range"] { width: 100%; margin: 8px 0 0; appearance: none; height: 22px; background: transparent; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: var(--track, var(--rule)); }
+  input[type="range"]::-moz-range-track { height: 8px; border-radius: 4px; background: var(--track, var(--rule)); }
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none; width: 18px; height: 18px; margin-top: -5px; border-radius: 50%;
+    background: var(--ink); border: 3px solid var(--panel);
+  }
+  input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 3px solid var(--panel); }
+  .legend-zone { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .legend-zone i { display: inline-block; width: 26px; height: 8px; border-radius: 4px; background: var(--zone); }
+
+  .readout-label { color: var(--muted); font-size: 15px; }
+  .big { font: 700 76px/1 var(--num); letter-spacing: -0.01em; margin: 4px 0 2px; }
+  .big small { font-size: 30px; font-weight: 400; margin-left: 6px; color: var(--muted); }
+  .range-text { font-size: 17px; }
+  .range-text b { font: 700 19px var(--num); }
+  .range-note { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  .scale { margin: 18px 0 6px; }
+  .scale svg { width: 100%; height: 64px; display: block; }
+  .risk { font-size: 17px; margin-top: 6px; }
+  .risk b { font: 700 21px var(--num); }
+  .risk.high b { color: var(--alarm); }
+
+  .warnings { margin-top: 14px; display: grid; gap: 6px; }
+  .warnings p {
+    margin: 0; padding: 9px 12px; background: var(--warn-bg); border: 1px solid var(--warn-rule);
+    border-radius: 4px; color: var(--warn); font-weight: 500;
+  }
+
+  .split { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-top: 16px; }
+  h2 { font: 600 16px/1.3 var(--ui); margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+  .chart svg { width: 100%; height: auto; display: block; }
+
+  .contrib { display: grid; gap: 7px; }
+  .contrib .row { display: grid; grid-template-columns: 112px 1fr 64px; align-items: center; gap: 8px; font-size: 14px; }
+  .contrib .track { position: relative; height: 12px; }
+  .contrib .track::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+  .contrib .bar { position: absolute; top: 0; height: 12px; border-radius: 2px; background: var(--process); }
+  .contrib .bar.neg { background: var(--ink); opacity: 0.75; }
+  .contrib .val { font: 600 15px var(--num); text-align: right; }
+
+  .ledger { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 16px; }
+  .ledger td { padding: 7px 0; border-bottom: 1px solid var(--rule); }
+  .ledger td:last-child { text-align: right; font: 700 19px var(--num); }
+  .ledger tr.total td { border-bottom: 0; padding-top: 10px; }
+  .ledger tr.total td:last-child { font-size: 24px; }
+  .verdict { margin-top: 12px; padding: 10px 12px; border-radius: 4px; font-weight: 600; }
+  .verdict.alarm { background: var(--alarm-bg); color: var(--alarm); border: 1px solid #e3a59f; }
+  .verdict.ok { background: #e6ebef; color: var(--ink); border: 1px solid var(--rule); }
+
+  .influence { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .imp .row { display: grid; grid-template-columns: 170px 1fr 56px; gap: 8px; align-items: center; font-size: 14px; margin-bottom: 6px; }
+  .imp .bar { height: 10px; background: var(--process); border-radius: 2px; }
+  .imp .val { font: 600 15px var(--num); text-align: right; }
+
+  .upload { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .upload label.file {
+    font: 600 15px var(--ui); background: var(--ink); color: #fff; padding: 9px 16px; border-radius: 4px; cursor: pointer;
+  }
+  .upload label.file input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .upload button { font: 600 15px var(--ui); background: var(--panel); color: var(--ink); border: 1px solid var(--muted); padding: 8px 14px; border-radius: 4px; cursor: pointer; }
+  .batch-summary { font-size: 17px; margin: 14px 0 8px; }
+  .batch-summary b { font: 700 20px var(--num); }
+  .batch-legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .batch-legend i { display: inline-block; width: 18px; height: 10px; margin-right: 6px; vertical-align: middle; }
+
+  .error { color: var(--alarm); font-weight: 600; }
+  footer { margin-top: 18px; color: var(--muted); font-size: 13px; max-width: 80ch; }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 900px) {
+    .grid, .split, .influence { grid-template-columns: 1fr; }
+    nav.tabs { margin-left: 0; }
+    .big { font-size: 60px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <h1>Эталон мощности ПГУ<small>Сколько станция должна выдавать при этой погоде — для заявки на завтра и для контроля оборудования</small></h1>
+    <nav class="tabs" role="tablist" aria-label="Режим">
+      <button role="tab" id="tab-plan" aria-selected="true" data-mode="plan">План на завтра</button>
+      <button role="tab" id="tab-control" aria-selected="false" data-mode="control">Контроль сейчас</button>
+      <button role="tab" id="tab-batch" aria-selected="false" data-mode="batch">Пакет часов</button>
+    </nav>
+  </header>
+
+  <div class="scenarios" id="scenarios"><span>Сценарии:</span></div>
+
+  <section id="view-single" class="grid">
+    <form class="panel" id="controls" autocomplete="off" onsubmit="return false">
+      <div id="sliders"></div>
+      <div class="control" data-only="plan">
+        <label><span class="name">Требуемый объём, МВт</span><input type="number" id="required" min="0" max="1000" step="1"></label>
+        <div class="hint">Сколько станция обязана выдать по заявке</div>
+      </div>
+      <div class="control" data-only="control">
+        <label><span class="name">Фактическая мощность, МВт</span><input type="number" id="actual" min="0" max="1000" step="0.1"></label>
+        <div class="hint">Показание станции прямо сейчас</div>
+      </div>
+      <div class="control" data-only="control">
+        <label><span class="name">Цена, ₽ за МВт·ч</span><input type="number" id="price" min="0" max="100000" step="1"></label>
+        <div class="hint">По умолчанию — средняя цена РСВ первой ценовой зоны за 2024 год</div>
+      </div>
+      <div class="legend-zone"><i></i>такие значения были в обучающих данных</div>
+    </form>
+
+    <div>
+      <div class="panel" id="readout" aria-live="polite">
+        <div class="readout-label" id="readout-label">Станция выдаст</div>
+        <div class="big" id="power">—<small>МВт</small></div>
+        <div class="range-text" id="range-text"></div>
+        <div class="range-note" id="range-note"></div>
+        <div class="scale" id="scale"></div>
+        <div class="risk" id="risk"></div>
+        <div id="ledger-box" hidden></div>
+        <div class="warnings" id="warnings"></div>
+      </div>
+      <div class="split">
+        <div class="panel chart">
+          <h2>Мощность от температуры</h2>
+          <p class="sub">По модели плана при остальной погоде как сейчас. Полоса — 9 случаев из 10.</p>
+          <div id="curve"></div>
+        </div>
+        <div class="panel">
+          <h2>Что сдвинуло прогноз</h2>
+          <p class="sub" id="contrib-sub">Вклад каждого параметра относительно среднего прогноза, МВт</p>
+          <div class="contrib" id="contrib"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-batch" class="panel" hidden>
+    <h2>Пакет часов</h2>
+    <p class="sub">Загрузите CSV или Excel: колонки AT, AP, RH обязательны, V и PE (факт) — по желанию. Строки считаются подряд идущими часами.</p>
+    <div class="upload">
+      <label class="file">Выбрать файл<input type="file" id="file" accept=".csv,.xlsx"></label>
+      <button type="button" id="example">Загрузить пример</button>
+      <span id="file-name" class="sub"></span>
+    </div>
+    <div id="batch-out"></div>
+  </section>
+
+  <section class="influence" id="influence"></section>
+  <footer id="footer"></footer>
+</div>
+
+<script>
+"use strict";
+const SLIDER_RANGES = { AT: [-5, 42, 0.1], AP: [985, 1040, 0.1], RH: [20, 100, 0.5], V: [20, 85, 0.1] };
+const SCENARIO_MODE = { "Плохой вакуум": "control", "Небывалое сочетание": "control" };
+const SCALE_RANGE = [415, 500];
+const DEFAULT_REQUIRED = 450;
+const SHORTFALL_ALARM = 0.3;
+const SHORTFALL_DEMO_MW = 9;
+const SERVER_DOWN = "Сервер не отвечает. Запустите его: .venv/bin/python -m uvicorn powerplant.api:create_app --factory --port 8001";
+const fmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmt0 = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 });
+
+const state = { mode: "plan", values: {}, meta: null, timer: null, seq: 0 };
+const $ = (id) => document.getElementById(id);
+
+function el(tag, attrs = {}, text) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function svg(tag, attrs = {}) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+  return node;
+}
+
+function svgText(attrs, text) {
+  const node = svg("text", attrs);
+  node.textContent = text;
+  return node;
+}
+
+function trackGradient(info) {
+  const [lo, hi] = SLIDER_RANGES[info.name];
+  const a = ((info.train_min - lo) / (hi - lo)) * 100;
+  const b = ((info.train_max - lo) / (hi - lo)) * 100;
+  return `linear-gradient(90deg, var(--rule) ${a}%, var(--zone) ${a}%, var(--zone) ${b}%, var(--rule) ${b}%)`;
+}
+
+function buildSliders() {
+  const box = $("sliders");
+  for (const info of state.meta.features) {
+    const [lo, hi, step] = SLIDER_RANGES[info.name];
+    const wrap = el("div", { class: "control" });
+    if (info.name === "V") wrap.dataset.only = "control";
+    const label = el("label");
+    const number = el("input", { type: "number", min: info.input_min, max: info.input_max, step, id: `num-${info.name}` });
+    label.append(el("span", { class: "name" }, info.label), number);
+    const range = el("input", { type: "range", min: lo, max: hi, step, id: `rng-${info.name}`, "aria-label": info.label });
+    range.style.setProperty("--track", trackGradient(info));
+    const hint = el("div", { class: "hint" }, `В данных: ${fmt.format(info.train_min)} … ${fmt.format(info.train_max)}`);
+    wrap.append(label, range, hint);
+    box.append(wrap);
+    range.addEventListener("input", () => setValue(info.name, Number(range.value)));
+    number.addEventListener("change", () => setValue(info.name, Number(number.value)));
+  }
+}
+
+function setValue(name, value, silent = false) {
+  state.values[name] = value;
+  const range = $(`rng-${name}`), number = $(`num-${name}`);
+  if (range) range.value = value;
+  if (number) number.value = value;
+  if (!silent) schedule();
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  for (const tab of document.querySelectorAll("nav.tabs button")) {
+    tab.setAttribute("aria-selected", String(tab.dataset.mode === mode));
+  }
+  $("view-single").hidden = mode === "batch";
+  $("view-batch").hidden = mode !== "batch";
+  for (const node of document.querySelectorAll("[data-only]")) node.hidden = node.dataset.only !== mode;
+  if (mode !== "batch") schedule(0);
+}
+
+function applyScenario(name) {
+  for (const [key, value] of Object.entries(state.meta.presets[name])) setValue(key, value, true);
+  $("actual").value = "";
+  setMode(SCENARIO_MODE[name] || (state.mode === "batch" ? "plan" : state.mode));
+}
+
+function buildScenarios() {
+  const box = $("scenarios");
+  for (const name of Object.keys(state.meta.presets)) {
+    const button = el("button", { type: "button" }, name);
+    button.addEventListener("click", () => applyScenario(name));
+    box.append(button);
+  }
+  const shortfall = el("button", { type: "button" }, "Недобор на станции");
+  shortfall.addEventListener("click", simulateShortfall);
+  box.append(shortfall);
+}
+
+async function simulateShortfall() {
+  applyScenario("Типичный час");
+  setMode("control");
+  try {
+    const result = await callPredict();
+    if (result.reference) {
+      $("actual").value = (result.reference.power - SHORTFALL_DEMO_MW).toFixed(1);
+      schedule(0);
+    }
+  } catch (error) {
+    showError(error);
+  }
+}
+
+function schedule(delay = 120) {
+  clearTimeout(state.timer);
+  state.timer = setTimeout(refresh, delay);
+}
+
+function payload() {
+  const v = state.values;
+  const body = { AT: v.AT, AP: v.AP, RH: v.RH };
+  if (state.mode === "plan" && $("required").value !== "") body.required_mw = Number($("required").value);
+  if (state.mode === "control") {
+    body.V = v.V;
+    if ($("actual").value !== "") body.actual_mw = Number($("actual").value);
+    if ($("price").value !== "") body.price_rub_per_mwh = Number($("price").value);
+  }
+  return body;
+}
+
+async function callPredict() {
+  const response = await fetch("/api/predict", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload()),
+  });
+  if (!response.ok) {
+    throw new Error(response.status === 422 ? "Значение вне физических границ — проверьте ввод" : `Ошибка сервера ${response.status}`);
+  }
+  return response.json();
+}
+
+function showError(error) {
+  const text = error instanceof TypeError ? SERVER_DOWN : error.message;
+  $("range-text").replaceChildren(el("span", { class: "error" }, text));
+}
+
+async function refresh() {
+  const seq = ++state.seq;
+  try {
+    const result = await callPredict();
+    if (seq === state.seq) render(result);
+  } catch (error) {
+    showError(error);
+  }
+}
+
+function render(result) {
+  const control = state.mode === "control" && result.reference;
+  const main = control ? result.reference : result.plan;
+  $("readout-label").textContent = control ? "Должна выдавать при этом вакууме" : "Станция выдаст по прогнозу погоды";
+  $("power").firstChild.textContent = fmt.format(main.power);
+  $("range-text").replaceChildren(
+    document.createTextNode("В 9 случаях из 10 — от "), el("b", {}, fmt.format(main.low)),
+    document.createTextNode(" до "), el("b", {}, fmt.format(main.high)), document.createTextNode(" МВт"),
+  );
+  $("range-note").textContent = control
+    ? "Эталон по фактической погоде и вакууму"
+    : "Если прогноз погоды точный; его ошибка расширяет диапазон";
+  const actual = $("actual").value === "" ? null : Number($("actual").value);
+  const marker = control ? actual : (result.plan_risk ? result.plan_risk.required_mw : null);
+  renderScale(main, marker, control);
+  renderRisk(control ? null : result.plan_risk);
+  renderLedger(control ? result : null, actual);
+  renderWarnings(result.warnings);
+  renderCurve(result.curve, state.values.AT);
+  renderContributions(main);
+}
+
+function xScale(value, width) {
+  const [lo, hi] = SCALE_RANGE;
+  return Math.max(0, Math.min(width, ((value - lo) / (hi - lo)) * width));
+}
+
+function renderScale(main, marker, control) {
+  const width = 800;
+  const root = svg("svg", { viewBox: `0 0 ${width} 64`, role: "img", "aria-label": "Шкала мощности станции" });
+  root.append(svg("rect", { x: 0, y: 22, width, height: 10, fill: "var(--rule)", rx: 2 }));
+  const left = xScale(main.low, width);
+  root.append(svg("rect", { x: left, y: 16, width: xScale(main.high, width) - left, height: 22, fill: "var(--band)", rx: 2 }));
+  for (let tick = SCALE_RANGE[0] + 5; tick < SCALE_RANGE[1]; tick += 10) {
+    const x = xScale(tick, width);
+    root.append(svg("line", { x1: x, x2: x, y1: 38, y2: 44, stroke: "var(--muted)" }));
+    root.append(svgText({ x, y: 58, "text-anchor": "middle", "font-size": 13, fill: "var(--muted)" }, String(tick)));
+  }
+  const needle = xScale(main.power, width);
+  root.append(svg("line", { x1: needle, x2: needle, y1: 8, y2: 44, stroke: "var(--ink)", "stroke-width": 3 }));
+  if (marker !== null) {
+    const x = xScale(marker, width);
+    const color = control && marker >= main.low ? "var(--ink)" : "var(--alarm)";
+    root.append(svg("line", { x1: x, x2: x, y1: 4, y2: 44, stroke: color, "stroke-width": 2, "stroke-dasharray": "4 3" }));
+    const anchor = x > width - 90 ? "end" : "start";
+    root.append(svgText({ x: anchor === "end" ? x - 4 : x + 4, y: 12, "text-anchor": anchor, "font-size": 13, fill: color }, control ? "факт" : "требуется"));
+  }
+  $("scale").replaceChildren(root);
+}
+
+function percentText(probability) {
+  if (probability < 0.001) return "меньше 0,1%";
+  if (probability > 0.999) return "больше 99,9%";
+  return `${fmt0.format(probability * 100)}%`;
+}
+
+function renderRisk(risk) {
+  const box = $("risk");
+  box.className = "risk";
+  if (!risk) { box.replaceChildren(); return; }
+  if (risk.shortfall_probability >= SHORTFALL_ALARM) box.classList.add("high");
+  box.replaceChildren(
+    document.createTextNode(`Риск не выдать ${fmt0.format(risk.required_mw)} МВт — `),
+    el("b", {}, percentText(risk.shortfall_probability)),
+  );
+}
+
+function signed(value) {
+  return (value > 0 ? "+" : value < 0 ? "−" : "") + fmt.format(Math.abs(value));
+}
+
+function renderLedger(result, actual) {
+  const box = $("ledger-box");
+  if (!result || !result.deviation) { box.hidden = true; box.replaceChildren(); return; }
+  const d = result.deviation;
+  const table = el("table", { class: "ledger" });
+  const rows = [
+    ["По погоде станция выдаёт", fmt.format(result.plan.power)],
+    ["Вакуум хуже (−) или лучше (+) обычного", signed(d.vacuum_mw)],
+    ["Не объясняется погодой и вакуумом", signed(d.other_mw)],
+    ["Факт", fmt.format(actual)],
+  ];
+  rows.forEach(([name, value], index) => {
+    const tr = el("tr", index === rows.length - 1 ? { class: "total" } : {});
+    tr.append(el("td", {}, name), el("td", {}, value));
+    table.append(tr);
+  });
+  let verdict;
+  if (d.below_reference_interval) {
+    verdict = el("div", { class: "verdict alarm" },
+      `Ниже нормы для этого вакуума на ${fmt.format(-d.other_mw)} МВт — стоит проверить оборудование. Потери ≈ ${fmt0.format(d.rub_per_hour)} ₽ в час`);
+  } else if (d.total_mw < 0) {
+    verdict = el("div", { class: "verdict ok" }, `Недобор ${fmt.format(-d.total_mw)} МВт объясняется условиями, ≈ ${fmt0.format(d.rub_per_hour)} ₽ в час`);
+  } else {
+    verdict = el("div", { class: "verdict ok" }, "Факт в пределах нормы");
+  }
+  box.replaceChildren(table, verdict);
+  box.hidden = false;
+}
+
+function renderWarnings(list) {
+  $("warnings").replaceChildren(...list.map((text) => el("p", {}, text)));
+}
+
+function renderCurve(points, current) {
+  if (!points.length) return;
+  const w = 520, h = 260, pad = { l: 44, r: 12, t: 12, b: 34 };
+  const xs = points.map((p) => p.AT);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.floor(Math.min(...points.map((p) => p.low)) / 10) * 10;
+  const y1 = Math.ceil(Math.max(...points.map((p) => p.high)) / 10) * 10;
+  const X = (v) => pad.l + ((v - x0) / (x1 - x0)) * (w - pad.l - pad.r);
+  const Y = (v) => h - pad.b - ((v - y0) / (y1 - y0)) * (h - pad.t - pad.b);
+  const root = svg("svg", { viewBox: `0 0 ${w} ${h}`, role: "img", "aria-label": "График мощности от температуры" });
+  for (let t = Math.ceil(x0 / 5) * 5; t <= x1; t += 5) {
+    root.append(svg("line", { x1: X(t), x2: X(t), y1: pad.t, y2: h - pad.b, stroke: "#d6dde3" }));
+    root.append(svgText({ x: X(t), y: h - 14, "text-anchor": "middle", "font-size": 12, fill: "var(--muted)" }, `${t}°`));
+  }
+  for (let v = y0; v <= y1; v += 10) {
+    root.append(svg("line", { x1: pad.l, x2: w - pad.r, y1: Y(v), y2: Y(v), stroke: "#d6dde3" }));
+    root.append(svgText({ x: pad.l - 6, y: Y(v) + 4, "text-anchor": "end", "font-size": 12, fill: "var(--muted)" }, String(v)));
+  }
+  const band = points.map((p) => `${X(p.AT)},${Y(p.high)}`).concat([...points].reverse().map((p) => `${X(p.AT)},${Y(p.low)}`));
+  root.append(svg("polygon", { points: band.join(" "), fill: "var(--band)", opacity: 0.8 }));
+  root.append(svg("polyline", { points: points.map((p) => `${X(p.AT)},${Y(p.power)}`).join(" "), fill: "none", stroke: "var(--process)", "stroke-width": 2.5 }));
+  if (current >= x0 && current <= x1) {
+    const nearest = points.reduce((best, p) => (Math.abs(p.AT - current) < Math.abs(best.AT - current) ? p : best), points[0]);
+    root.append(svg("line", { x1: X(current), x2: X(current), y1: pad.t, y2: h - pad.b, stroke: "var(--ink)", "stroke-dasharray": "3 3" }));
+    root.append(svg("circle", { cx: X(current), cy: Y(nearest.power), r: 5, fill: "var(--ink)" }));
+  }
+  $("curve").replaceChildren(root);
+}
+
+function renderContributions(main) {
+  const box = $("contrib");
+  if (!main.contributions || !main.contributions.length) { box.replaceChildren(); return; }
+  $("contrib-sub").textContent = `Относительно среднего прогноза ${fmt.format(main.base_mw)} МВт, в МВт`;
+  const limit = Math.max(...main.contributions.map((c) => Math.abs(c.mw)), 1);
+  box.replaceChildren(...main.contributions.map((c) => {
+    const row = el("div", { class: "row" });
+    const track = el("div", { class: "track" });
+    const share = (Math.abs(c.mw) / limit) * 50;
+    const bar = el("div", { class: c.mw < 0 ? "bar neg" : "bar" });
+    bar.style.left = c.mw < 0 ? `${50 - share}%` : "50%";
+    bar.style.width = `${share}%`;
+    track.append(bar);
+    row.append(el("span", {}, c.label.split(",")[0]), track, el("span", { class: "val" }, signed(c.mw)));
+    return row;
+  }));
+}
+
+function renderInfluence() {
+  const titles = { plan: "Модель плана: что важнее", ref: "Эталон: что важнее" };
+  const blocks = Object.entries(state.meta.importance || {}).filter(([, items]) => items.length).map(([key, items]) => {
+    const panel = el("div", { class: "panel imp" });
+    panel.append(el("h2", {}, titles[key] || key), el("p", { class: "sub" }, "На сколько МВт вырастет ошибка, если перемешать значения параметра"));
+    const top = Math.max(...items.map((i) => i.mw), 0.01);
+    for (const item of items) {
+      const row = el("div", { class: "row" });
+      const bar = el("div", { class: "bar" });
+      bar.style.width = `${(item.mw / top) * 100}%`;
+      const holder = el("div");
+      holder.append(bar);
+      row.append(el("span", {}, item.label.split(",")[0]), holder, el("span", { class: "val" }, fmt.format(item.mw)));
+      panel.append(row);
+    }
+    return panel;
+  });
+  $("influence").replaceChildren(...blocks);
+}
+
+function renderFooter() {
+  const m = state.meta.metrics || {};
+  const parts = [];
+  if (m.plan) parts.push(`Модель плана — ${m.plan.name.toLowerCase()}, средняя ошибка на отложенных данных ${fmt.format(m.plan.test_mae)} МВт.`);
+  if (m.ref) parts.push(`Эталон — ${m.ref.name.toLowerCase()}, ${fmt.format(m.ref.test_mae)} МВт.`);
+  if (m.plan) parts.push(`Полоса «9 из 10» на отложенных данных накрыла ${fmt0.format(m.plan.coverage_test * 100)}% часов.`);
+  parts.push("Модель верна для режима полной нагрузки. Данные: UCI, 9 527 часов работы ПГУ, 2006–2011.");
+  $("footer").textContent = parts.join(" ");
+}
+
+async function runBatch(file) {
+  const out = $("batch-out");
+  out.replaceChildren(el("p", { class: "sub" }, "Считаю…"));
+  const form = new FormData();
+  form.append("file", file);
+  try {
+    const response = await fetch("/api/batch", { method: "POST", body: form });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      out.replaceChildren(el("p", { class: "error" }, typeof body.detail === "string" ? body.detail : `Файл не принят (${response.status})`));
+      return;
+    }
+    renderBatch(body);
+  } catch (error) {
+    out.replaceChildren(el("p", { class: "error" }, SERVER_DOWN));
+  }
+}
+
+function renderBatch(body) {
+  const s = body.summary;
+  const summary = el("div", { class: "batch-summary" });
+  summary.append(document.createTextNode("Часов: "), el("b", {}, String(s.rows)), document.createTextNode(". "));
+  if (s.has_actual) {
+    if (s.alarm_hours) {
+      summary.append(document.createTextNode("Тревога с "), el("b", {}, `${s.first_alarm_hour}-го часа`),
+        document.createTextNode(`, всего ${s.alarm_hours} ч. `));
+    } else {
+      summary.append(document.createTextNode("Тревог нет. "));
+    }
+    summary.append(document.createTextNode("Недобор за файл: "), el("b", {}, `${fmt.format(s.lost_mwh)} МВт·ч`),
+      document.createTextNode(` ≈ ${fmt0.format(s.lost_rub)} ₽.`));
+  }
+  if (s.novelty_hours) summary.append(document.createTextNode(` Часов с небывалыми условиями: ${s.novelty_hours}.`));
+  $("batch-out").replaceChildren(summary, batchChart(body.rows), batchLegend(s));
+}
+
+function batchChart(rows) {
+  const w = 1000, h = 300, pad = { l: 48, r: 12, t: 10, b: 30 };
+  const values = rows.flatMap((r) => [r.low, r.high, r.actual ?? r.plan]);
+  const y0 = Math.floor(Math.min(...values) / 5) * 5, y1 = Math.ceil(Math.max(...values) / 5) * 5;
+  const X = (i) => pad.l + (i / Math.max(rows.length - 1, 1)) * (w - pad.l - pad.r);
+  const Y = (v) => h - pad.b - ((v - y0) / (y1 - y0)) * (h - pad.t - pad.b);
+  const step = (w - pad.l - pad.r) / Math.max(rows.length - 1, 1);
+  const root = svg("svg", { viewBox: `0 0 ${w} ${h}`, role: "img", "aria-label": "Почасовой график" });
+  rows.forEach((r, i) => {
+    if (r.alarm) root.append(svg("rect", { x: X(i) - step / 2, y: pad.t, width: step, height: h - pad.t - pad.b, fill: "var(--alarm-bg)" }));
+  });
+  for (let v = y0; v <= y1; v += 5) {
+    root.append(svg("line", { x1: pad.l, x2: w - pad.r, y1: Y(v), y2: Y(v), stroke: "#d6dde3" }));
+    root.append(svgText({ x: pad.l - 6, y: Y(v) + 4, "text-anchor": "end", "font-size": 12, fill: "var(--muted)" }, String(v)));
+  }
+  const band = rows.map((r, i) => `${X(i)},${Y(r.high)}`).concat(rows.map((r, i) => `${X(i)},${Y(r.low)}`).reverse());
+  root.append(svg("polygon", { points: band.join(" "), fill: "var(--band)", opacity: 0.7 }));
+  const line = (key, attrs) => root.append(svg("polyline", { points: rows.map((r, i) => `${X(i)},${Y(r[key])}`).join(" "), fill: "none", ...attrs }));
+  line("plan", { stroke: "var(--process)", "stroke-width": 2 });
+  if (rows[0].reference !== null) line("reference", { stroke: "var(--process)", "stroke-width": 1.5, "stroke-dasharray": "5 4" });
+  if (rows[0].actual !== null) line("actual", { stroke: "var(--ink)", "stroke-width": 1.8 });
+  const wrap = el("div", { class: "chart" });
+  wrap.append(root);
+  return wrap;
+}
+
+function batchLegend(s) {
+  const legend = el("div", { class: "batch-legend" });
+  const item = (style, text) => {
+    const span = el("span"), swatch = el("i");
+    swatch.setAttribute("style", style);
+    span.append(swatch, document.createTextNode(text));
+    return span;
+  };
+  legend.append(item("background: var(--band)", "план по погоде, 9 из 10"));
+  if (s.has_vacuum) legend.append(item("border-top: 2px dashed var(--process); height: 0", "эталон с учётом вакуума"));
+  if (s.has_actual) legend.append(item("background: var(--ink); height: 2px", "факт"));
+  if (s.has_actual) legend.append(item("background: var(--alarm-bg)", "тревога: среднее за сутки ниже нормы"));
+  return legend;
+}
+
+async function loadExample() {
+  try {
+    const text = await fetch("/api/batch/example").then((r) => r.text());
+    $("file-name").textContent = "Пример: часы из данных, которых модель не видела; со второй половины мощность искусственно снижена на 2%";
+    runBatch(new File([text], "example.csv", { type: "text/csv" }));
+  } catch (error) {
+    $("batch-out").replaceChildren(el("p", { class: "error" }, SERVER_DOWN));
+  }
+}
+
+async function init() {
+  try {
+    const response = await fetch("/api/meta");
+    state.meta = await response.json();
+  } catch (error) {
+    $("range-text").replaceChildren(el("span", { class: "error" }, SERVER_DOWN));
+    return;
+  }
+  buildSliders();
+  buildScenarios();
+  renderInfluence();
+  renderFooter();
+  $("required").value = DEFAULT_REQUIRED;
+  $("price").value = state.meta.price_default;
+  for (const id of ["required", "actual", "price"]) $(id).addEventListener("input", () => schedule());
+  for (const tab of document.querySelectorAll("nav.tabs button")) tab.addEventListener("click", () => setMode(tab.dataset.mode));
+  $("file").addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (file) { $("file-name").textContent = file.name; runBatch(file); }
+  });
+  $("example").addEventListener("click", loadExample);
+  applyScenario("Типичный час");
+  setMode("plan");
+}
+
+init();
+</script>
+</body>
+</html>
