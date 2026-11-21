@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from types import MappingProxyType
@@ -200,13 +201,18 @@ def physically_plausible(
 ) -> bool:
     """Физическая проверка: при росте температуры по всему диапазону данных мощность не растёт.
 
-    Остальные признаки — на медианах. Подъём больше `tolerance` МВт — модель отбраковывается.
+    Остальные признаки ставим на 10, 50 и 90-й перцентили во всех сочетаниях. Подъём больше
+    `tolerance` МВт хотя бы на одном срезе — модель отбраковывается.
     """
     grid = np.linspace(x["AT"].min(), x["AT"].max(), points)
-    frame = pd.DataFrame({col: np.full(points, x[col].median()) for col in x.columns})
-    frame = frame.assign(AT=grid)
-    prediction = np.asarray(fitted.predict(frame), dtype=float)
-    return bool(np.max(np.diff(prediction), initial=0.0) <= tolerance)
+    others = [col for col in x.columns if col != "AT"]
+    levels = [x[col].quantile(config.PHYSICS_SLICE_QUANTILES).to_numpy() for col in others]
+    for combo in itertools.product(*levels):
+        frame = pd.DataFrame({"AT": grid, **dict(zip(others, combo, strict=True))})
+        prediction = np.asarray(fitted.predict(frame[list(x.columns)]), dtype=float)
+        if np.max(np.diff(prediction), initial=0.0) > tolerance:
+            return False
+    return True
 
 
 def select_model(

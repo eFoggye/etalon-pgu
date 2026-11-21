@@ -139,6 +139,19 @@ def test_physics_check_rejects_power_rising_with_temperature():
     assert not physically_plausible(RisingAtEdge(), x)
 
 
+def test_physics_check_looks_beyond_the_median_slice():
+    rng = np.random.default_rng(1)
+    x = pd.DataFrame({"AT": rng.uniform(0, 35, 300), "AP": rng.normal(1013, 5, 300),
+                      "RH": rng.uniform(30, 100, 300)})
+
+    class RisingWhenHumid:
+        def predict(self, frame):
+            at, rh = frame["AT"].to_numpy(), frame["RH"].to_numpy()
+            return 500 - 2 * at + np.where(rh > 90, 3 * at, 0)
+
+    assert not physically_plausible(RisingWhenHumid(), x)
+
+
 def test_physics_variant_keeps_temperature_constraint():
     ladder = {c.name: c for c in build_ladder(seed=0, features=("AT", "AP", "RH"))}
 
