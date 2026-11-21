@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from powerplant.features import PhysicsFeatures, air_density, dew_point
+from powerplant.features import PhysicsFeatures, air_density, air_density_van_der_waals, dew_point
 from powerplant.models import (
     CvResult,
     build_ladder,
@@ -66,6 +66,21 @@ def test_air_density_matches_standard_atmosphere():
 
 def test_humid_air_is_lighter_than_dry_air():
     assert air_density(25.0, 1013.0, 90.0) < air_density(25.0, 1013.0, 10.0)
+
+
+def test_van_der_waals_changes_density_by_less_than_a_tenth_of_percent_at_atmosphere():
+    ideal = air_density(15.0, 1013.25, 50.0)
+
+    real = air_density_van_der_waals(15.0, 1013.25, 50.0)
+
+    assert 0 < real / ideal - 1 < 0.001
+
+
+def test_van_der_waals_density_falls_with_temperature():
+    cold = air_density_van_der_waals(0.0, 1013.0, 60.0)
+    hot = air_density_van_der_waals(30.0, 1013.0, 60.0)
+
+    assert cold > hot
 
 
 def test_dew_point_equals_temperature_at_full_humidity():
