@@ -6,72 +6,78 @@
 <title>Эталон мощности ПГУ</title>
 <style>
   :root {
-    --bg: #e4e7ea;
-    --panel: #f3f4f5;
+    --bg: #f3f6fa;
+    --panel: #ffffff;
     --ink: #1d2731;
-    --muted: #5e6a75;
-    --rule: #c5cbd1;
+    --muted: #5f6b78;
+    --rule: #dfe5ec;
+    --soft: #f6f8fb;
     --process: #1d6fb8;
     --ref: #b5651d;
-    --band: #bccfdd;
-    --zone: #9fb4c6;
+    --band: #cddcee;
+    --zone: #a9c0d8;
     --warn: #8a5a00;
-    --warn-bg: #fbf0d6;
-    --warn-rule: #e2b85a;
-    --alarm: #a8261d;
-    --alarm-bg: #f6dfdc;
+    --warn-bg: #fdf5e3;
+    --warn-rule: #f0d08a;
+    --alarm: #b42318;
+    --alarm-bg: #fdecea;
+    --radius: 16px;
+    --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 20px rgba(16, 24, 40, 0.06);
     --num: "DIN Alternate", "Bahnschrift", "DIN Condensed", "Arial Narrow", sans-serif;
     --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--bg);
+    background: linear-gradient(180deg, #e7eef9 0, var(--bg) 380px) no-repeat, var(--bg);
     color: var(--ink);
     font: 15px/1.45 var(--ui);
     font-variant-numeric: tabular-nums;
   }
-  .wrap { max-width: 1240px; margin: 0 auto; padding: 18px 24px 40px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 24px 24px 48px; }
 
   header.bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 32px; }
   h1 { font: 700 26px/1.1 var(--num); letter-spacing: 0.01em; margin: 0; }
   h1 small { display: block; font: 400 14px/1.4 var(--ui); color: var(--muted); margin-top: 4px; }
-  nav.tabs { display: flex; gap: 2px; margin-left: auto; background: var(--rule); padding: 2px; border-radius: 6px; }
+  nav.tabs { display: flex; gap: 4px; margin-left: auto; background: #e4eaf2; padding: 4px; border-radius: 14px; }
   nav.tabs button {
     font: 600 15px var(--ui); color: var(--muted); background: transparent; border: 0;
-    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+    padding: 8px 18px; border-radius: 10px; cursor: pointer; transition: background 0.15s, color 0.15s;
   }
-  nav.tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); }
+  nav.tabs button:hover { color: var(--ink); }
+  nav.tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12); }
 
   .scenarios { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 18px 0 16px; }
   .scenarios span { color: var(--muted); margin-right: 4px; }
   .scenarios button {
     font: 500 14px var(--ui); color: var(--ink); background: var(--panel);
-    border: 1px solid var(--rule); border-radius: 4px; padding: 6px 12px; cursor: pointer;
+    border: 1px solid var(--rule); border-radius: 999px; padding: 7px 15px; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); transition: border-color 0.15s, background 0.15s;
   }
-  .scenarios button:hover { border-color: var(--muted); }
+  .scenarios button:hover { border-color: #b9c6d4; background: var(--soft); }
 
   button:focus-visible, input:focus-visible { outline: 3px solid var(--process); outline-offset: 2px; }
 
   .grid { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 16px; align-items: start; }
-  .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 18px 20px; }
+  .panel { background: var(--panel); border: 1px solid #e7ecf2; border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); }
 
   .control { margin-bottom: 18px; }
   .control label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .control .name { font-weight: 600; }
   .control input[type="number"] {
     width: 92px; font: 600 17px var(--num); text-align: right; color: var(--ink);
-    border: 1px solid var(--rule); border-radius: 4px; padding: 3px 6px; background: #fff;
+    border: 1px solid var(--rule); border-radius: 10px; padding: 5px 9px; background: var(--soft);
   }
+  .control input[type="number"]:focus { background: #fff; border-color: var(--process); }
   .control .hint { color: var(--muted); font-size: 13px; margin-top: 2px; }
   input[type="range"] { width: 100%; margin: 8px 0 0; appearance: none; height: 22px; background: transparent; }
   input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: var(--track, var(--rule)); }
   input[type="range"]::-moz-range-track { height: 8px; border-radius: 4px; background: var(--track, var(--rule)); }
   input[type="range"]::-webkit-slider-thumb {
-    appearance: none; width: 18px; height: 18px; margin-top: -5px; border-radius: 50%;
-    background: var(--ink); border: 3px solid var(--panel);
+    appearance: none; width: 20px; height: 20px; margin-top: -6px; border-radius: 50%;
+    background: #fff; border: 3px solid var(--ink); box-shadow: 0 1px 3px rgba(16, 24, 40, 0.2);
   }
-  input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 3px solid var(--panel); }
+  input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 3px solid var(--ink); }
   .legend-zone { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 8px; }
   .legend-zone i { display: inline-block; width: 26px; height: 8px; border-radius: 4px; background: var(--zone); }
 
@@ -91,7 +97,7 @@
   .warnings { margin-top: 14px; display: grid; gap: 6px; }
   .warnings p {
     margin: 0; padding: 9px 12px; background: var(--warn-bg); border: 1px solid var(--warn-rule);
-    border-radius: 4px; color: var(--warn); font-weight: 500;
+    border-radius: 12px; color: var(--warn); font-weight: 500;
   }
 
   .split { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-top: 16px; }
@@ -103,7 +109,7 @@
   .contrib .row { display: grid; grid-template-columns: 112px 1fr 64px; align-items: center; gap: 8px; font-size: 14px; }
   .contrib .track { position: relative; height: 12px; }
   .contrib .track::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
-  .contrib .bar { position: absolute; top: 0; height: 12px; border-radius: 2px; background: var(--process); }
+  .contrib .bar { position: absolute; top: 0; height: 12px; border-radius: 6px; background: var(--process); }
   .contrib .bar.neg { background: var(--ink); opacity: 0.75; }
   .contrib .val { font: 600 15px var(--num); text-align: right; }
 
@@ -112,21 +118,22 @@
   .ledger td:last-child { text-align: right; font: 700 19px var(--num); }
   .ledger tr.total td { border-bottom: 0; padding-top: 10px; }
   .ledger tr.total td:last-child { font-size: 24px; }
-  .verdict { margin-top: 12px; padding: 10px 12px; border-radius: 4px; font-weight: 600; }
-  .verdict.alarm { background: var(--alarm-bg); color: var(--alarm); border: 1px solid #e3a59f; }
-  .verdict.ok { background: #e6ebef; color: var(--ink); border: 1px solid var(--rule); }
+  .verdict { margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-weight: 600; }
+  .verdict.alarm { background: var(--alarm-bg); color: var(--alarm); border: 1px solid #f5b8b1; }
+  .verdict.ok { background: var(--soft); color: var(--ink); border: 1px solid var(--rule); }
 
   .influence { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .imp .row { display: grid; grid-template-columns: 170px 1fr 56px; gap: 8px; align-items: center; font-size: 14px; margin-bottom: 6px; }
-  .imp .bar { height: 10px; background: var(--process); border-radius: 2px; }
+  .imp .bar { height: 10px; background: var(--process); border-radius: 6px; }
   .imp .val { font: 600 15px var(--num); text-align: right; }
 
   .upload { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
   .upload label.file {
-    font: 600 15px var(--ui); background: var(--ink); color: #fff; padding: 9px 16px; border-radius: 4px; cursor: pointer;
+    font: 600 15px var(--ui); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 12px; cursor: pointer;
   }
   .upload label.file input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-  .upload button { font: 600 15px var(--ui); background: var(--panel); color: var(--ink); border: 1px solid var(--muted); padding: 8px 14px; border-radius: 4px; cursor: pointer; }
+  .upload button { font: 600 15px var(--ui); background: var(--panel); color: var(--ink); border: 1px solid var(--rule); padding: 9px 16px; border-radius: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); }
+  .upload button:hover { background: var(--soft); }
   .batch-summary { font-size: 17px; margin: 14px 0 8px; }
   .batch-summary b { font: 700 20px var(--num); }
   .batch-legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 13px; margin-top: 6px; }
@@ -497,11 +504,11 @@ function renderCurve(points, current) {
   const Y = (v) => h - pad.b - ((v - y0) / (y1 - y0)) * (h - pad.t - pad.b);
   const root = svg("svg", { viewBox: `0 0 ${w} ${h}`, role: "img", "aria-label": "График мощности от температуры" });
   for (let t = Math.ceil(x0 / 5) * 5; t <= x1; t += 5) {
-    root.append(svg("line", { x1: X(t), x2: X(t), y1: pad.t, y2: h - pad.b, stroke: "#d6dde3" }));
+    root.append(svg("line", { x1: X(t), x2: X(t), y1: pad.t, y2: h - pad.b, stroke: "#e6ebf1" }));
     root.append(svgText({ x: X(t), y: h - 14, "text-anchor": "middle", "font-size": 12, fill: "var(--muted)" }, `${t}°`));
   }
   for (let v = y0; v <= y1; v += 10) {
-    root.append(svg("line", { x1: pad.l, x2: w - pad.r, y1: Y(v), y2: Y(v), stroke: "#d6dde3" }));
+    root.append(svg("line", { x1: pad.l, x2: w - pad.r, y1: Y(v), y2: Y(v), stroke: "#e6ebf1" }));
     root.append(svgText({ x: pad.l - 6, y: Y(v) + 4, "text-anchor": "end", "font-size": 12, fill: "var(--muted)" }, String(v)));
   }
   for (const run of curveRuns(points)) {
@@ -617,7 +624,7 @@ function batchChart(rows) {
     if (r.alarm) root.append(svg("rect", { x: X(i) - step / 2, y: pad.t, width: step, height: h - pad.t - pad.b, fill: "var(--alarm-bg)" }));
   });
   for (let v = y0; v <= y1; v += 5) {
-    root.append(svg("line", { x1: pad.l, x2: w - pad.r, y1: Y(v), y2: Y(v), stroke: "#d6dde3" }));
+    root.append(svg("line", { x1: pad.l, x2: w - pad.r, y1: Y(v), y2: Y(v), stroke: "#e6ebf1" }));
     root.append(svgText({ x: pad.l - 6, y: Y(v) + 4, "text-anchor": "end", "font-size": 12, fill: "var(--muted)" }, String(v)));
   }
   const band = rows.map((r, i) => `${X(i)},${Y(r.high)}`).concat(rows.map((r, i) => `${X(i)},${Y(r.low)}`).reverse());
